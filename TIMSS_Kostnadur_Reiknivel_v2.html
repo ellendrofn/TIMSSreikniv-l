@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="is">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TIMSS 2027 – Kostnaðarreiknivél</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#F8F9FB;color:#1a1a2e;font-size:15px;line-height:1.6}
+.page{max-width:940px;margin:0 auto;padding:2rem 1.5rem}
+header{margin-bottom:1.5rem}
+header h1{font-size:24px;font-weight:700;color:#1E2761;margin-bottom:4px}
+header p{font-size:14px;color:#64748b}
+.badge{display:inline-block;background:#EEF2FF;color:#3730a3;font-size:11px;padding:3px 10px;border-radius:20px;margin-top:6px}
+
+/* TABS */
+.tabs{display:flex;gap:4px;margin-bottom:1.5rem;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:5px}
+.tab-btn{flex:1;padding:10px 16px;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;background:transparent;color:#64748b;transition:all .15s}
+.tab-btn.active{background:#1E2761;color:#fff}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* SECTION */
+.section{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1rem}
+.sec-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;cursor:pointer;user-select:none}
+.sec-title{font-size:13px;font-weight:700;color:#1E2761;text-transform:uppercase;letter-spacing:.04em}
+.sec-total{font-size:14px;font-weight:700;color:#1E2761}
+.sec-toggle{font-size:16px;color:#94a3b8}
+.sec-body.collapsed{display:none}
+
+/* ROWS */
+.row{display:grid;grid-template-columns:1fr 160px 130px;align-items:center;gap:8px;padding:.4rem 0;border-bottom:1px solid #f1f5f9}
+.row:last-child{border-bottom:none}
+.row-label{font-size:14px;color:#1a1a2e}
+.row-hint{font-size:11px;color:#94a3b8;margin-top:1px}
+.row input[type=number]{width:100%;font-size:14px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;color:#1a1a2e;text-align:right}
+.row input[type=number]:focus{outline:none;border-color:#1E2761;background:#fff}
+.row-result{font-size:13px;font-weight:600;color:#1E2761;text-align:right}
+
+/* SUMMARY */
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1.25rem}
+.metric{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px}
+.metric-label{font-size:12px;color:#64748b;margin-bottom:4px}
+.metric-value{font-size:20px;font-weight:700;color:#1E2761}
+
+.total-bar{background:#1E2761;border-radius:12px;padding:1.25rem 1.5rem;display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px}
+.total-label{font-size:14px;color:#CADCFC}
+.total-sub{font-size:12px;color:#8899cc;margin-top:2px}
+.total-value{font-size:30px;font-weight:800;color:#fff}
+
+/* BREAKDOWN */
+.b-row{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+.b-label{font-size:13px;color:#64748b;min-width:160px}
+.b-wrap{flex:1;background:#f1f5f9;border-radius:4px;height:8px;overflow:hidden}
+.b-fill{height:100%;border-radius:4px;transition:width .4s ease}
+.b-val{font-size:13px;font-weight:600;color:#1E2761;min-width:85px;text-align:right}
+.b-pct{font-size:11px;color:#94a3b8;margin-left:3px}
+
+/* COMPARE */
+.c-row{display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid #f1f5f9;font-size:14px}
+.c-row:last-child{border-bottom:none}
+.c-row span:first-child{color:#64748b}
+.c-row span:last-child{font-weight:600;color:#1E2761}
+.c-row.deficit span:last-child{color:#c0392b;font-weight:700}
+.alert{border-radius:8px;padding:.75rem 1rem;font-size:13px;margin-top:.75rem}
+.alert-red{background:#fdedec;border:1px solid #f5c6c6;color:#7b1f1f}
+.alert-green{background:#eaf3de;border:1px solid #b7dca0;color:#1a4a0a}
+.alert-amber{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
+
+/* TAB 2 – LAUNAKOSTNAÐUR */
+.timeline{position:relative;margin:1.5rem 0 2rem}
+.tl-line{position:absolute;left:16px;top:24px;bottom:0;width:2px;background:#e2e8f0}
+.tl-item{display:flex;gap:16px;margin-bottom:1.25rem;position:relative}
+.tl-dot{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;z-index:1}
+.tl-dot.blue{background:#EEF2FF;color:#1E2761;border:2px solid #1E2761}
+.tl-dot.gray{background:#f1f5f9;color:#64748b;border:2px solid #cbd5e1}
+.tl-dot.red{background:#fdedec;color:#c0392b;border:2px solid #f5a5a5}
+.tl-dot.green{background:#eaf3de;color:#1a7a4a;border:2px solid #86c96a}
+.tl-content{flex:1;padding-top:4px}
+.tl-date{font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em}
+.tl-text{font-size:14px;color:#1a1a2e;margin-top:2px}
+.tl-sub{font-size:12px;color:#94a3b8}
+
+.person-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-bottom:1.25rem}
+.person-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:1.25rem}
+.person-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+.person-name{font-size:14px;font-weight:700;color:#1E2761}
+.person-role{font-size:12px;color:#64748b}
+.overtime-badge{background:#fdedec;color:#c0392b;font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap}
+.person-rows{}
+.p-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid #f8fafc}
+.p-row:last-child{border-bottom:none}
+.p-row span:first-child{color:#64748b}
+.p-row span:last-child{font-weight:500;color:#1E2761}
+.p-row.highlight span:last-child{color:#c0392b;font-weight:700}
+.p-bar{margin-top:10px}
+.p-bar-label{font-size:11px;color:#94a3b8;margin-bottom:4px}
+.p-bar-wrap{background:#f1f5f9;border-radius:4px;height:8px;overflow:hidden;position:relative}
+.p-bar-samn{position:absolute;top:0;left:0;height:100%;background:#CADCFC;border-radius:4px}
+.p-bar-raun{position:absolute;top:0;left:0;height:100%;border-radius:4px;transition:width .4s}
+
+.stada-compare{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:1.25rem 0}
+.stada-box{border-radius:10px;padding:1rem;text-align:center}
+.stada-box.gray{background:#f8fafc;border:1px solid #e2e8f0}
+.stada-box.amber{background:#fffbeb;border:1px solid #fde68a}
+.stada-box.blue{background:#EEF2FF;border:1px solid #c7d2fe}
+.stada-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.stada-box.gray .stada-label{color:#64748b}
+.stada-box.amber .stada-label{color:#92400e}
+.stada-box.blue .stada-label{color:#3730a3}
+.stada-num{font-size:28px;font-weight:800}
+.stada-box.gray .stada-num{color:#1E2761}
+.stada-box.amber .stada-num{color:#b45309}
+.stada-box.blue .stada-num{color:#1E2761}
+.stada-sub{font-size:12px;margin-top:4px}
+.stada-box.gray .stada-sub{color:#94a3b8}
+.stada-box.amber .stada-sub{color:#92400e}
+.stada-box.blue .stada-sub{color:#3730a3}
+
+.samn-table{width:100%;border-collapse:collapse;font-size:14px;margin-top:.75rem}
+.samn-table th{text-align:left;padding:8px 10px;background:#f8fafc;font-weight:600;color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:.03em;border-bottom:2px solid #e2e8f0}
+.samn-table td{padding:8px 10px;border-bottom:1px solid #f1f5f9;color:#1a1a2e}
+.samn-table tr:last-child td{border-bottom:none}
+.samn-table .num{text-align:right;font-weight:600;color:#1E2761}
+.samn-table .red{color:#c0392b;font-weight:700}
+.samn-table .green{color:#1a7a4a;font-weight:700}
+
+.input-row{display:flex;align-items:center;gap:10px;margin-bottom:.6rem}
+.input-label{font-size:14px;color:#1a1a2e;min-width:220px}
+.input-hint{font-size:11px;color:#94a3b8;min-width:220px;display:block}
+.input-row input{font-size:14px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;color:#1a1a2e;text-align:right;width:110px}
+.input-val{font-size:13px;font-weight:600;color:#1E2761;min-width:90px;text-align:right}
+
+footer{text-align:center;font-size:12px;color:#94a3b8;margin-top:2rem;padding-top:1rem;border-top:1px solid #e2e8f0}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <h1>TIMSS 2027 — Kostnaðargreining</h1>
+  <p>Mennta- og barnamálaráðuneytið · Verkefnisstjórnun</p>
+  <span class="badge">Aksturspening: 144 kr/km (ríkisreglur frá 1. okt. 2025)</span>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('rekstr')">Rekstrarkostnaður</button>
+  <button class="tab-btn" onclick="showTab('laun')">Launakostnaður stjórnenda</button>
+  <button class="tab-btn" onclick="showTab('skipulag')">Skipulag prófstjóra</button>
+</div>
+
+<!-- ===================== TAB 1: REKSTRARKOSTNAÐUR ===================== -->
+<div id="tab-rekstr" class="tab-panel active">
+
+  <div class="summary-grid" id="summary-grid"></div>
+  <div class="total-bar">
+    <div>
+      <div class="total-label">Rekstrarkostnaður samtals</div>
+      <div class="total-sub" id="vs-sub" style="display:none"></div>
+    </div>
+    <div class="total-value" id="total-val">–</div>
+  </div>
+
+  <!-- Stærð verkefnis -->
+  <div class="section">
+    <div class="sec-header" onclick="toggle(this)">
+      <span class="sec-title">Stærð verkefnis</span>
+      <div style="display:flex;align-items:center;gap:12px"><span class="sec-toggle">▲</span></div>
+    </div>
+    <div class="sec-body">
+      <div class="row">
+        <div><div class="row-label">Fjöldi skóla</div><div class="row-hint">Forprófun: 30 · Aðalprófun: ~170</div></div>
+        <input type="number" id="skolar" value="30" min="1" max="500" oninput="calc()">
+        <div class="row-result" id="r-skolar">–</div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Nemendur í 5. bekk</div><div class="row-hint">Hagstofa 2024: 4.700 á landsvísu</div></div>
+        <input type="number" id="nem5" value="4700" min="0" oninput="calc()">
+        <div class="row-result" id="r-nem5">–</div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Áætlaðir bekkir (5. bekk)</div><div class="row-hint">Hagstofa 2024: ~214 bekkir á landsvísu</div></div>
+        <input type="number" id="bekkir5" value="214" min="1" oninput="calc()">
+        <div class="row-result" id="r-bekkir5">–</div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Nemendur í 9. bekk</div><div class="row-hint">Hagstofa 2024: 5.100 á landsvísu</div></div>
+        <input type="number" id="nem9" value="5100" min="0" oninput="calc()">
+        <div class="row-result" id="r-nem9">–</div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Áætlaðir bekkir (9. bekk)</div><div class="row-hint">Hagstofa 2024: ~232 bekkir á landsvísu</div></div>
+        <input type="number" id="bekkir9" value="232" min="1" oninput="calc()">
+        <div class="row-result" id="r-bekkir9">–</div>
+      </div>
+      <div class="row" style="background:#f8fafc">
+        <div><div class="row-label" style="font-weight:600">Bekkir samtals (= fjöldi prófstjóra)</div></div>
+        <div></div>
+        <div class="row-result" id="r-bekkirtotal" style="font-weight:700;color:#1E2761">–</div>
+      </div>
+      <div class="row" style="background:#f8fafc">
+        <div><div class="row-label" style="font-weight:600">Nemendur samtals</div></div>
+        <div></div>
+        <div class="row-result" id="r-nemtotal" style="font-weight:700">–</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prófstjórar -->
+  <div class="section">
+    <div class="sec-header" onclick="toggle(this)">
+      <span class="sec-title">a) Prófstjórar</span>
+      <div style="display:flex;align-items:center;gap:12px"><span class="sec-total" id="st-profs"></span><span class="sec-toggle">▲</span></div>
+    </div>
+    <div class="sec-body">
+      <div class="row">
+        <div><div class="row-label">Fjöldi prófstjóra</div><div class="row-hint" id="profs-hint">Sjá "Skipulag prófstjóra" flipa til að reikna þetta út</div></div>
+        <input type="number" id="pf" value="0" min="0" oninput="calc()">
+        <div class="row-result" id="r-pf">–</div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Vinnudagar</div></div>
+        <input type="number" id="pd" value="15" min="1" oninput="calc()">
+        <div class="row-result" id="r-pd">–</div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Tímar á dag að meðaltali</div></div>
+        <input type="number" id="pt" value="6" min="1" max="12" step="0.5" oninput="calc()">
+        <div class="row-result" id="r-pt">–</div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Tímakaup (kr)</div></div>
+        <input type="number" id="pk" value="4200" min="1000" oninput="calc()">
+        <div class="row-result" id="r-proflaun">–</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gæðastjórar -->
+  <div class="section">
+    <div class="sec-header" onclick="toggle(this)">
+      <span class="sec-title">b) Gæðastjórar</span>
+      <div style="display:flex;align-items:center;gap:12px"><span class="sec-total" id="st-gaeda"></span><span class="sec-toggle">▲</span></div>
+    </div>
+    <div class="sec-body">
+      <div class="row">
+        <div><div class="row-label">Fjöldi gæðastjóra</div><div class="row-hint" id="gaeda-hint">10% af skólum</div></div>
+        <input type="number" id="gf" value="3" min="0" oninput="calc()">
+        <div class="row-result" id="r-gf">–</div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Vinnudagar</div></div>
+        <input type="number" id="gd" value="15" min="1" oninput="calc()">
+        <div class="row-result" id="r-gd">–</div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Tímar á dag</div></div>
+        <input type="number" id="gt" value="6" min="1" max="12" step="0.5" oninput="calc()">
+        <div class="row-result" id="r-gt">–</div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Tímakaup (kr)</div></div>
+        <input type="number" id="gk" value="4200" min="1000" oninput="calc()">
+        <div class="row-result" id="r-gaedalaun">–</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Akstur -->
+  <div class="section">
+    <div class="sec-header" onclick="toggle(this)">
+      <span class="sec-title">c) Akstur</span>
+      <div style="display:flex;align-items:center;gap:12px"><span class="sec-total" id="st-akstur"></span><span class="sec-toggle">▲</span></div>
+    </div>
+    <div class="sec-body">
+      <div class="row">
+        <div><div class="row-label">Meðalakstur á dag (km/mann)</div><div class="row-hint">Prófstjórar + gæðastjórar</div></div>
+        <input type="number" id="km" value="15" min="0" oninput="calc()">
+        <div class="row-result" id="r-km">–</div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Aksturstaxti (kr/km)</div><div class="row-hint">Ríkisreglur okt. 2025: 144 kr/km</div></div>
+        <input type="number" id="krkm" value="144" min="50" oninput="calc()">
+        <div class="row-result" id="r-krkm">–</div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Prófstjórar + gæðastjórar</div><div class="row-hint">Sótt sjálfkrafa úr a) og b)</div></div>
+        <div></div>
+        <div class="row-result" id="r-akstur-fjoldi" style="color:#64748b">–</div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Dagar með akstri</div><div class="row-hint">Sótt sjálfkrafa úr a) vinnudagar</div></div>
+        <div></div>
+        <div class="row-result" id="r-akstur-dagar" style="color:#64748b">–</div>
+      </div>
+      <div class="row" style="background:#f8fafc">
+        <div><div class="row-label" style="font-weight:600">Aksturkostnaður samtals</div></div>
+        <div></div>
+        <div class="row-result" id="r-akstur">–</div>
+      </div>
+      <div class="alert alert-amber" style="margin-top:.75rem;font-size:12px">
+        Ferðakostnaðarnefnd: 144 kr/km (0–10.000 km) · 130 kr/km (10–20.000 km) · 115 kr/km (umfram 20.000 km) — gildir frá 1. október 2025
+      </div>
+    </div>
+  </div>
+
+  <!-- Kóðarar -->
+  <div class="section">
+    <div class="sec-header" onclick="toggle(this)">
+      <span class="sec-title">d) Kóðarar</span>
+      <div style="display:flex;align-items:center;gap:12px"><span class="sec-total" id="st-kod"></span><span class="sec-toggle">▲</span></div>
+    </div>
+    <div class="sec-body">
+      <div class="row">
+        <div><div class="row-label">Fjöldi kóðara</div><div class="row-hint" id="kodara-hint">1 kóðari / 500 nem. (reiknað)</div></div>
+        <input type="number" id="kof" value="5" min="1" oninput="calc()">
+        <div class="row-result" id="r-kof">–</div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Vinnudagar</div></div>
+        <input type="number" id="kod" value="5" min="1" oninput="calc()">
+        <div class="row-result" id="r-kod">–</div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Tímar á dag</div></div>
+        <input type="number" id="kot" value="8" min="1" max="10" oninput="calc()">
+        <div class="row-result" id="r-kot">–</div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Tímakaup (kr)</div></div>
+        <input type="number" id="kok" value="4200" min="1000" oninput="calc()">
+        <div class="row-result" id="r-kodlaun">–</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Annar kostnaður -->
+  <div class="section">
+    <div class="sec-header" onclick="toggle(this)">
+      <span class="sec-title">e) Annar kostnaður</span>
+      <div style="display:flex;align-items:center;gap:12px"><span class="sec-total" id="st-annar"></span><span class="sec-toggle">▲</span></div>
+    </div>
+    <div class="sec-body">
+      <div class="row">
+        <div><div class="row-label">Pappír og prentun</div><div class="row-hint">Próftextar, leiðbeiningar, skráningarblöð</div></div>
+        <input type="number" id="an-pappir" value="150000" min="0" step="10000" oninput="calc()">
+        <div class="row-result" id="r-pappir">–</div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Möppur og umbúðir</div><div class="row-hint">Til að pakka og geyma prófgögn</div></div>
+        <input type="number" id="an-moppur" value="80000" min="0" step="10000" oninput="calc()">
+        <div class="row-result" id="r-moppur">–</div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Póstur og sending</div><div class="row-hint">Sending gagna til og frá skólum</div></div>
+        <input type="number" id="an-postur" value="50000" min="0" step="10000" oninput="calc()">
+        <div class="row-result" id="r-postur">–</div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Annar rekstrarkostnaður</div><div class="row-hint">Þýðing, tækni, óvænt útgjöld o.fl.</div></div>
+        <input type="number" id="an-adrir" value="100000" min="0" step="10000" oninput="calc()">
+        <div class="row-result" id="r-adrir">–</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sundurliðun -->
+  <div class="section">
+    <div class="sec-header" onclick="toggle(this)">
+      <span class="sec-title">Sundurliðun</span>
+      <span class="sec-toggle">▲</span>
+    </div>
+    <div class="sec-body">
+      <div id="breakdown"></div>
+      <div style="background:#EEF2FF;border:1px solid #c7d2fe;border-radius:8px;padding:.6rem 1rem;font-size:12px;color:#3730a3;margin-top:1rem">
+        <strong>Heimildir:</strong> Aksturspening: Ferðakostnaðarnefnd, auglýsing nr. 1/2025 · Nemendatölur: <a href="https://px.hagstofa.is/pxis/pxweb/is/Samfelag/Samfelag__skolamal__2_grunnskolastig__0_gsNemendur/SKO02102.px" target="_blank" style="color:#3730a3">Hagstofa Íslands, grunnskólastig 2024</a>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /tab-rekstr -->
+
+<!-- ===================== TAB 2: LAUNAKOSTNAÐUR ===================== -->
+<div id="tab-laun" class="tab-panel">
+
+  <!-- STÖÐUGILDI SAMANBURÐUR -->
+  <div class="section">
+    <div class="sec-header" style="cursor:default">
+      <span class="sec-title">Samningur vs. raunveruleg þátttaka</span>
+    </div>
+    <div class="sec-body">
+
+      <div class="stada-compare">
+        <div class="stada-box gray">
+          <div class="stada-label">Samningur (eðlileg aðstæður)</div>
+          <div class="stada-num">1,5</div>
+          <div class="stada-sub">stöðugildi · frá september</div>
+        </div>
+        <div class="stada-box amber">
+          <div class="stada-label">Raunveruleg notkun</div>
+          <div class="stada-num" id="stada-raun">2,6</div>
+          <div class="stada-sub" id="stada-raun-sub">stöðugildi í gangi</div>
+        </div>
+        <div class="stada-box blue">
+          <div class="stada-label">Krafa stofnunar</div>
+          <div class="stada-num">2,0</div>
+          <div class="stada-sub">stöðugildi · í 2 ár</div>
+        </div>
+      </div>
+
+      <div class="alert alert-amber">
+        Ráðuneytið ákvað þátttöku í <strong>desember 2025</strong> — 3 mánuðum eftir að önnur þátttökulönd byrjuðu (september 2025). Þetta þýðir að eðlilegur undirbúningstími féll niður og við þurftum að ráðast í þetta með of fáum mannafla of fljótt.
+      </div>
+    </div>
+  </div>
+
+  <!-- TÍMALÍNA -->
+  <div class="section">
+    <div class="sec-header" style="cursor:default">
+      <span class="sec-title">Tímalína — hvenær störfuðum við</span>
+    </div>
+    <div class="sec-body">
+      <div class="timeline">
+        <div class="tl-line"></div>
+        <div class="tl-item">
+          <div class="tl-dot green">S</div>
+          <div class="tl-content">
+            <div class="tl-date">September 2025</div>
+            <div class="tl-text">Önnur þátttökulönd byrja forprófun</div>
+            <div class="tl-sub">Eðlilegur upphafsmaður — 1,5 stöðugildi hefði dugað</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot red">D</div>
+          <div class="tl-content">
+            <div class="tl-date">Desember 2025</div>
+            <div class="tl-text">Ráðuneytið ákvað þátttöku Íslands</div>
+            <div class="tl-sub">3 mánaða seinkun miðað við önnur lönd</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot blue">1</div>
+          <div class="tl-content">
+            <div class="tl-date">1. janúar 2026</div>
+            <div class="tl-text">Verkefnisstjóri 1 — 100% starf hefst</div>
+            <div class="tl-sub">Undirbúningur, samningar, skipulag — einn á meðan þörf var á fleiri</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot blue">2</div>
+          <div class="tl-content">
+            <div class="tl-date">1. febrúar 2026</div>
+            <div class="tl-text">Verkefnisstjóri 2 — 50% starf hefst</div>
+            <div class="tl-sub">Hækkaði í 60% um miðjan mars</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot blue">3</div>
+          <div class="tl-content">
+            <div class="tl-date">1. mars 2026</div>
+            <div class="tl-text">Verkejnisstjóri 3 — 100% starf hefst</div>
+            <div class="tl-sub">Þrátt fyrir 100% stöðu: 60+ yfirvinnutímar þegar</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot gray">→</div>
+          <div class="tl-content">
+            <div class="tl-date">Apríl–maí 2026</div>
+            <div class="tl-text">Forprófun í gangi — við erum að drukkna</div>
+            <div class="tl-sub">30 skólar · 13 prófstjórar · 2,5 vikur á vettvangi</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ÞÁTTTAKA HVERS OG EINS -->
+  <div class="section">
+    <div class="sec-header" style="cursor:default">
+      <span class="sec-title">Vinnuframlag og yfirvinnutímar</span>
+    </div>
+    <div class="sec-body">
+      <div class="person-grid" id="person-grid"></div>
+      <div class="alert alert-red" id="yfirv-total"></div>
+    </div>
+  </div>
+
+  <!-- STILLANLEG FORSENDUR -->
+  <div class="section">
+    <div class="sec-header" onclick="toggle(this)">
+      <span class="sec-title">Forsendur launareikninga</span>
+      <span class="sec-toggle">▲</span>
+    </div>
+    <div class="sec-body" style="padding-top:.25rem">
+      <div class="row">
+        <div><div class="row-label">Mánaðarlaun 100% (kr)</div></div>
+        <input type="number" id="L-ml" value="900000" min="500000" step="10000" oninput="calcLaun()">
+        <div class="row-result" id="L-r-ml">–</div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Launahlutfall</div><div class="row-hint">lífeyrir, orlof o.fl.</div></div>
+        <input type="number" id="L-lh" value="1.35" min="1.0" max="1.6" step="0.01" oninput="calcLaun()">
+        <div class="row-result" id="L-r-lh">–</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SAMNINGUR 3 ÁRA -->
+  <div class="section">
+    <div class="sec-header" style="cursor:default">
+      <span class="sec-title">Samningur 3 ára — samið vs. krafa</span>
+    </div>
+    <div class="sec-body">
+      <table class="samn-table">
+        <thead>
+          <tr>
+            <th>Tímabil</th>
+            <th>Lýsing</th>
+            <th class="num">Samið (stgj.)</th>
+            <th class="num">Krafa (stgj.)</th>
+            <th class="num">Munur á ári</th>
+          </tr>
+        </thead>
+        <tbody id="samn-tbody"></tbody>
+        <tfoot id="samn-tfoot"></tfoot>
+      </table>
+      <div class="alert alert-red" id="samn-alert" style="margin-top:.75rem"></div>
+    </div>
+  </div>
+
+</div><!-- /tab-laun -->
+
+<!-- ===================== TAB 3: SKIPULAG PRÓFSTJÓRA ===================== -->
+<div id="tab-skipulag" class="tab-panel">
+
+  <div class="section">
+    <div class="sec-header" style="cursor:default">
+      <span class="sec-title">Forsendur</span>
+    </div>
+    <div class="sec-body">
+      <div class="row">
+        <div><div class="row-label">Heildarfjöldi bekkja</div><div class="row-hint">Sótt frá "Stærð verkefnis" flipanum – eða settu inn handvirkt</div></div>
+        <input type="number" id="sk-bekkir" value="0" min="0" oninput="calcSkip()">
+        <div class="row-result" id="sk-r-bekkir">–</div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Bekkir á dag á prófstjóra</div><div class="row-hint">1 bekk á dag (samkvæmt reynslu)</div></div>
+        <input type="number" id="sk-per-dag" value="1" min="1" max="4" step="0.5" oninput="calcSkip()">
+        <div class="row-result" id="sk-r-perdag">–</div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Fjöldi vikna</div><div class="row-hint">Hve margar vikur á prófunin að taka?</div></div>
+        <input type="number" id="sk-vikur" value="2.5" min="0.5" max="20" step="0.5" oninput="calcSkip()">
+        <div class="row-result" id="sk-r-vikur">–</div>
+      </div>
+      <div class="row">
+        <div><div class="row-label">Virkir dagar á viku</div><div class="row-hint">Mán–fös = 5 dagar</div></div>
+        <input type="number" id="sk-dagar-viku" value="5" min="1" max="7" oninput="calcSkip()">
+        <div class="row-result" id="sk-r-dagarv">–</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="total-bar" style="margin-bottom:1rem">
+    <div>
+      <div class="total-label">Prófstjórar þarf</div>
+      <div class="total-sub" id="sk-sub">–</div>
+    </div>
+    <div class="total-value" id="sk-total">–</div>
+  </div>
+
+  <div class="section">
+    <div class="sec-header" style="cursor:default">
+      <span class="sec-title">Útreikningur</span>
+    </div>
+    <div class="sec-body" id="sk-utreikningur"></div>
+  </div>
+
+  <div class="section">
+    <div class="sec-header" style="cursor:default">
+      <span class="sec-title">Samanburður — hvað ef við breytum tíma eða fjölda?</span>
+    </div>
+    <div class="sec-body">
+      <div style="overflow-x:auto">
+        <table class="samn-table" id="sk-tafla" style="min-width:500px">
+          <thead>
+            <tr>
+              <th>Vikur</th>
+              <th>Virkir dagar</th>
+              <th class="num">Prófstjórar</th>
+              <th class="num">Kostnaður (est.)</th>
+            </tr>
+          </thead>
+          <tbody id="sk-tafla-body"></tbody>
+        </table>
+      </div>
+      <p style="font-size:12px;color:#94a3b8;margin-top:.5rem">Kostnaður: prófstjórar × dagar × 6 klst × 4.200 kr (breytt í forsendum)</p>
+    </div>
+  </div>
+
+</div><!-- /tab-skipulag -->
+
+
+<footer>TIMSS 2027 · Kostnaðargreining · Apríl 2026</footer>
+
+</div><!-- /page -->
+
+<script>
+// ---------- HELPERS ----------
+function v(id){return parseFloat(document.getElementById(id).value)||0;}
+function setHTML(id,t){const e=document.getElementById(id);if(e)e.innerHTML=t;}
+function set(id,t){const e=document.getElementById(id);if(e)e.textContent=t;}
+function fmt(n){return Math.round(n).toLocaleString('is-IS')+' kr';}
+function fmtM(n){
+  const m=n/1e6;
+  if(Math.abs(m)>=10) return Math.round(m).toLocaleString('is-IS')+' m.kr.';
+  return (Math.round(m*10)/10).toFixed(1).replace('.',',')+' m.kr.';
+}
+function toggle(hdr){
+  const b=hdr.parentElement.querySelector('.sec-body');
+  const a=hdr.querySelector('.sec-toggle');
+  if(b.classList.contains('collapsed')){b.classList.remove('collapsed');a.textContent='▲';}
+  else{b.classList.add('collapsed');a.textContent='▼';}
+}
+function showTab(id){
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',['rekstr','laun','skipulag'][i]===id));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  if(id==='skipulag') calcSkip();
+}
+
+// ---------- TAB 1: REKSTRARKOSTNAÐUR ----------
+function calc(){
+  const skolar=v('skolar'),nem5=v('nem5'),nem9=v('nem9');
+  const bekkir5=v('bekkir5'), bekkir9=v('bekkir9');
+  const nemTotal=nem5+nem9;
+  const bekkirtotal=bekkir5+bekkir9;
+
+  set('r-nem5',nem5.toLocaleString('is-IS')+' nem.');
+  set('r-nem9',nem9.toLocaleString('is-IS')+' nem.');
+  set('r-bekkir5',bekkir5+' bekkir');
+  set('r-bekkir9',bekkir9+' bekkir');
+  set('r-bekkirtotal',bekkirtotal+' bekkir / prófstjórar');
+
+  document.getElementById('gaeda-hint').textContent='10% af skólum = '+Math.max(1,Math.round(skolar*.1))+' gæðastjórar';
+  document.getElementById('kodara-hint').textContent='1 kóðari/500 nem. = '+Math.max(1,Math.round(nemTotal/500))+' kóðarar';
+
+
+  const pf=v('pf'),pd=v('pd'),pt=v('pt'),pk=v('pk');
+  const proflaun=pf*pd*pt*pk;
+  set('r-pf',pf+' prófstjórar'); set('r-pd',pd+' dagar'); set('r-pt',pt+' klst/dag');
+  set('r-proflaun',fmtM(proflaun)); set('st-profs',fmtM(proflaun));
+
+  const gf=v('gf'),gd=v('gd'),gt=v('gt'),gk=v('gk');
+  const gaedalaun=gf*gd*gt*gk;
+  set('r-gf',gf+' gæðastjórar'); set('r-gd',gd+' dagar'); set('r-gt',gt+' klst/dag');
+  set('r-gaedalaun',fmtM(gaedalaun)); set('st-gaeda',fmtM(gaedalaun));
+
+  const km=v('km'),krkm=v('krkm');
+  const akstur=(pf+gf)*km*krkm*pd;
+  set('r-km',km+' km/dag/mann'); set('r-krkm',krkm+' kr/km');
+  set('r-akstur-fjoldi',(pf+gf)+' manns');
+  set('r-akstur-dagar',pd+' dagar (= prófstjóradagar)');
+  set('r-akstur',fmtM(akstur)); set('st-akstur',fmtM(akstur));
+
+  const kof=v('kof'),kod=v('kod'),kot=v('kot'),kok=v('kok');
+  const kodlaun=kof*kod*kot*kok;
+  set('r-kof',kof+' kóðarar'); set('r-kod',kod+' dagar'); set('r-kot',kot+' klst/dag');
+  set('r-kodlaun',fmtM(kodlaun)); set('st-kod',fmtM(kodlaun));
+
+  const pap=v('an-pappir'),mop=v('an-moppur'),pos=v('an-postur'),adr=v('an-adrir');
+  const annar=pap+mop+pos+adr;
+  set('r-pappir',fmtM(pap)); set('r-moppur',fmtM(mop));
+  set('r-postur',fmtM(pos)); set('r-adrir',fmtM(adr));
+  set('st-annar',fmtM(annar));
+
+  const total=proflaun+gaedalaun+akstur+kodlaun+annar;
+  set('total-val',fmtM(total));
+  set('r-skolar',skolar+' skólar');
+  set('r-nemtotal',nemTotal.toLocaleString('is-IS')+' nemendur');
+
+  const mets=[
+    {l:'Prófstjórar',v:proflaun,c:'#1E2761'},
+    {l:'Gæðastjórar',v:gaedalaun,c:'#2d4a8a'},
+    {l:'Akstur',v:akstur,c:'#BA7517'},
+    {l:'Kóðarar',v:kodlaun,c:'#1E2761'},
+    {l:'Annar kostnaður',v:annar,c:'#64748b'}
+  ];
+  (document.getElementById('summary-grid')||{set innerHTML(v){} }).innerHTML=mets.map(m=>
+    `<div class="metric"><div class="metric-label">${m.l}</div><div class="metric-value">${fmtM(m.v)}</div></div>`).join('');
+
+  (document.getElementById('breakdown')||{set innerHTML(v){} }).innerHTML=mets.map(m=>{
+    const pct=total>0?Math.round(m.v/total*100):0;
+    return `<div class="b-row"><span class="b-label">${m.l}</span>
+      <div class="b-wrap"><div class="b-fill" style="width:${Math.max(2,pct)}%;background:${m.c}"></div></div>
+      <span class="b-val">${fmtM(m.v)}<span class="b-pct">${pct}%</span></span></div>`;
+  }).join('');
+}
+
+// ---------- TAB 2: LAUNAKOSTNAÐUR ----------
+const PEOPLE = [
+  {
+    name: 'Verkefnisstjóri 1',
+    role: 'Rannsóknarstjóri',
+    start: 'Jan 2026',
+    // hlutföll eftir mánuðum: jan, feb, mar, apr (4 mánuðir)
+    months: [
+      {label:'Jan', hlut:1.0, dagar:22},
+      {label:'Feb', hlut:1.0, dagar:20},
+      {label:'Mar', hlut:1.0, dagar:21},
+      {label:'Apr', hlut:1.0, dagar:22},
+    ],
+    yfirv: 80,
+    color: '#1E2761'
+  },
+  {
+    name: 'Verkefnisstjóri 2',
+    role: 'Starfsmaður',
+    start: 'Feb 2026',
+    months: [
+      {label:'Jan', hlut:0, dagar:0},
+      {label:'Feb', hlut:0.5, dagar:20},
+      {label:'Mar', hlut:0.55, dagar:21}, // 50% → 60% um miðjan mars
+      {label:'Apr', hlut:0.6, dagar:22},
+    ],
+    yfirv: 0,
+    color: '#2d4a8a'
+  },
+  {
+    name: 'Verkefnisstjóri 3',
+    role: 'Starfsmaður',
+    start: 'Mar 2026',
+    months: [
+      {label:'Jan', hlut:0, dagar:0},
+      {label:'Feb', hlut:0, dagar:0},
+      {label:'Mar', hlut:1.0, dagar:21},
+      {label:'Apr', hlut:1.0, dagar:22},
+    ],
+    yfirv: 60,
+    color: '#c0392b'
+  }
+];
+
+function calcLaun(){
+  const ml=v('L-ml'), lh=v('L-lh');
+  set('L-r-ml', fmt(Math.round(ml*lh))+'/mán (með hlutfalli)');
+  set('L-r-lh', '×'+lh.toFixed(2)+' = '+Math.round((lh-1)*100)+'% kostnaðarviðbót');
+
+  // Reikna heildarstöðugildi
+  let totalHlut=0, totalMon=0;
+  PEOPLE.forEach(p=>{p.months.forEach(m=>{if(m.hlut>0){totalHlut+=m.hlut;totalMon++;}});});
+  const avgHlut = totalMon>0?(totalHlut/totalMon):0;
+  set('stada-raun', avgHlut.toFixed(1).replace('.',','));
+  set('stada-raun-sub', 'meðalstöðugildi í gangi');
+
+  const totalYfirv = PEOPLE.reduce((a,p)=>a+p.yfirv,0);
+
+  // Person cards
+  document.getElementById('person-grid').innerHTML = PEOPLE.map(p=>{
+    let totalKr=0, totalEftirlaunKr=0;
+    let totalRaunHlut=0, monCount=0;
+    p.months.forEach(m=>{
+      if(m.hlut>0){
+        totalKr += m.hlut*ml*lh;
+        totalEftirlaunKr += m.hlut*ml*lh;
+        totalRaunHlut += m.hlut;
+        monCount++;
+      }
+    });
+    const avgH = monCount>0?totalRaunHlut/monCount:0;
+    const samanlagtHlut = totalRaunHlut; // stgj-mánuðir
+    const yKr = p.yfirv * (ml*lh / (22*8)); // yfirvinnutímar → kr
+    const normKr = 1.5 * ml * lh * monCount / 3; // hvað 1.5 stgj hefðu kostað
+
+    const mRows = p.months.filter(m=>m.hlut>0).map(m=>
+      `<div class="p-row"><span>${m.label}</span><span>${Math.round(m.hlut*100)}%</span></div>`
+    ).join('');
+
+    const raun_w = Math.min(100, Math.round(avgH/2*100));
+    const samn_w = Math.min(100, Math.round(1.5/2*100));
+
+    return `<div class="person-card">
+      <div class="person-head">
+        <div><div class="person-name">${p.name}</div><div class="person-role">${p.role} · frá ${p.start}</div></div>
+        ${p.yfirv>0?`<span class="overtime-badge">+${p.yfirv} yfirv.klst</span>`:''}
+      </div>
+      <div class="person-rows">${mRows}</div>
+      <div class="p-row highlight" style="margin-top:6px"><span>Launakostnaður</span><span>${fmtM(totalKr)}</span></div>
+      ${p.yfirv>0?`<div class="p-row highlight"><span>Ógreiddur yfirvinnukostnaður</span><span>+${fmtM(yKr)}</span></div>`:''}
+      <div class="p-bar">
+        <div class="p-bar-label">Meðalhlutfall: ${Math.round(avgH*100)}% (samningur gerði ráð fyrir 50% á mann)</div>
+        <div class="p-bar-wrap">
+          <div class="p-bar-samn" style="width:${samn_w}%"></div>
+          <div class="p-bar-raun" style="width:${raun_w}%;background:${p.color};opacity:.7"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Yfirvinnutímar samtals
+  const yTimiKr = (ml*lh)/(22*8);
+  const totalYKr = totalYfirv * yTimiKr;
+  setHTML('yfirv-total', `Samtals <strong>${totalYfirv} yfirvinnutímar</strong> á þessum 4 mánuðum sem eru ógreiddir eða endurgreiddir að hluta — sem samsvarar um <strong>${fmtM(totalYKr)}</strong> í launakostnaði.`);
+
+  // Samningur 3 ára
+  const yr1_samn=1.5, yr1_krafa=2.0;
+  const yr2_samn=1.5, yr2_krafa=2.0;
+  const yr3_samn=0.3, yr3_krafa=0.3;
+  const arnKr = ml*lh*12;
+  const rows=[
+    {ar:'Ár 1 (2026)', l:'Forprófun + aðalprófun', s:yr1_samn, k:yr1_krafa},
+    {ar:'Ár 2 (2027)', l:'Aðalprófun + úrvinnsla', s:yr2_samn, k:yr2_krafa},
+    {ar:'Ár 3 (2028)', l:'Lokaskýrsla + eftirfylgni', s:yr3_samn, k:yr3_krafa},
+  ];
+  let totalDiff=0;
+  document.getElementById('samn-tbody').innerHTML = rows.map(r=>{
+    const diff=(r.k-r.s)*arnKr;
+    totalDiff+=diff;
+    const cls = diff>0?'red':diff<0?'green':'';
+    return `<tr>
+      <td>${r.ar}</td><td>${r.l}</td>
+      <td class="num">${r.s.toFixed(1).replace('.',',')}</td>
+      <td class="num">${r.k.toFixed(1).replace('.',',')}</td>
+      <td class="num ${cls}">${diff>0?'+':''}${fmtM(diff)}</td>
+    </tr>`;
+  }).join('');
+  (document.getElementById('samn-tfoot')||{set innerHTML(v){} }).innerHTML=`<tr style="font-weight:700;border-top:2px solid #e2e8f0">
+    <td colspan="2">Samtals viðbótarkostnaður (2 ár)</td>
+    <td class="num">3,3</td><td class="num">4,3</td>
+    <td class="num red">+${fmtM(totalDiff)}</td>
+  </tr>`;
+  setHTML('samn-alert', `Munurinn á samnum og kröfu nemur <strong>${fmtM(totalDiff)}</strong> yfir 2 starfsár — þ.e. viðbótar 0,5 stöðugildi á ári í 2 ár, á launum ${fmt(Math.round(ml*lh*12*0.5))} á ári.`);
+}
+
+calc();
+calcLaun();
+calcSkip();
+
+// ---------- TAB 3: SKIPULAG PRÓFSTJÓRA ----------
+function calcSkip(){
+  const bekkir = v('sk-bekkir');
+  const perDag = v('sk-per-dag');
+  const vikur  = v('sk-vikur');
+  const dagarV = v('sk-dagar-viku');
+
+  const dagartotal = Math.round(vikur * dagarV);
+  const dagarSlots = dagartotal * perDag; // hve marga bekki er hægt að klára með 1 prófstjóra
+  const profstj = dagarSlots > 0 ? Math.ceil(bekkir / dagarSlots) : 0;
+  const dagarhver = profstj > 0 ? Math.ceil(bekkir / profstj) : 0;
+
+  set('sk-r-bekkir', bekkir + ' bekkir');
+  set('sk-r-perdag', perDag + ' bekk/dag/mann');
+  set('sk-r-vikur', vikur + ' vikur = ' + dagartotal + ' dagar');
+  set('sk-r-dagarv', dagarV + ' dagar/viku');
+  set('sk-total', profstj + ' prófstjórar');
+  set('sk-sub', bekkir + ' bekkir ÷ ' + dagartotal + ' dagar × ' + perDag + ' bekk/dag');
+
+  // Útreikningur
+  const tKaup = v('pk') || 4200;
+  const tTimar = v('pt') || 6;
+  const kostnadur = profstj * dagarhver * tTimar * tKaup;
+
+  document.getElementById('sk-utreikningur').innerHTML = `
+    <div class="b-row" style="margin-bottom:1rem">
+      <span class="b-label">Bekkir samtals</span>
+      <div class="b-wrap"><div class="b-fill" style="width:100%;background:#1E2761"></div></div>
+      <span class="b-val">${bekkir}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:1rem">
+      <div class="metric"><div class="metric-label">Virkir dagar samtals</div><div class="metric-value">${dagartotal}</div></div>
+      <div class="metric"><div class="metric-label">Bekkir/dag á mann</div><div class="metric-value">${perDag}</div></div>
+      <div class="metric"><div class="metric-label">Prófstjórar þarf</div><div class="metric-value" style="color:#1E2761">${profstj}</div></div>
+      <div class="metric"><div class="metric-label">Dagar á mann</div><div class="metric-value">${dagarhver}</div></div>
+    </div>
+    <div style="background:#f8fafc;border-radius:8px;padding:.75rem 1rem;font-size:13px;color:#64748b">
+      <strong style="color:#1E2761">Útreikningur:</strong>
+      ${bekkir} bekkir ÷ (${dagartotal} dagar × ${perDag} bekk/dag) = <strong>${profstj} prófstjórar</strong>
+      — hver vinnur í <strong>${dagarhver} daga</strong>
+    </div>`;
+
+  // Samanburðartafla — mismunandi vikufjöldi
+  const vikulist = [1, 1.5, 2, 2.5, 3, 4, 5, 6];
+  document.getElementById('sk-tafla-body').innerHTML = vikulist.map(vk => {
+    const dg = Math.round(vk * dagarV);
+    const ps = dg * perDag > 0 ? Math.ceil(bekkir / (dg * perDag)) : '–';
+    const dk = typeof ps === 'number' ? Math.ceil(bekkir / ps) : '–';
+    const kr = typeof ps === 'number' ? ps * dk * tTimar * tKaup : 0;
+    const isActive = vk === vikur;
+    return `<tr style="${isActive ? 'background:#EEF2FF;font-weight:600' : ''}">
+      <td>${vk} ${vk === 1 ? 'vika' : 'vikur'}</td>
+      <td>${dg} dagar</td>
+      <td class="num">${ps}</td>
+      <td class="num">${typeof kr === 'number' && kr > 0 ? fmtM(kr) : '–'}</td>
+    </tr>`;
+  }).join('');
+}
+
+</script>
+</body>
+</html>
